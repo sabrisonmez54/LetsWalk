@@ -6,15 +6,117 @@
 //
 
 import SwiftUI
+import MapKit
+import HealthKit
 
-struct Workout: View {
+struct WorkoutView: View {
+    @StateObject var locationViewModel = LocationViewModel()
+    
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        switch locationViewModel.authorizationStatus {
+        case .notDetermined:
+            AnyView(RequestLocationView())
+                .environmentObject(locationViewModel)
+        case .restricted:
+            ErrorView(errorText: "Location use is restricted.")
+        case .denied:
+            ErrorView(errorText: "The app does not have location permissions. Please enable them in settings.")
+        case .authorizedAlways, .authorizedWhenInUse:
+            TrackingView()
+                .environmentObject(locationViewModel)
+        default:
+            Text("Unexpected status")
+        }
     }
 }
 
-struct Workout_Previews: PreviewProvider {
-    static var previews: some View {
-        Workout()
+struct RequestLocationView: View {
+    @EnvironmentObject var locationViewModel: LocationViewModel
+    
+    var body: some View {
+        VStack {
+            Image(systemName: "location.circle")
+                .resizable()
+                .frame(width: 100, height: 100, alignment: .center)
+                .foregroundColor(/*@START_MENU_TOKEN@*/.blue/*@END_MENU_TOKEN@*/)
+            Button(action: {
+                locationViewModel.requestPermission()
+            }, label: {
+                Label("Allow tracking", systemImage: "location")
+            })
+            .padding(10)
+            .foregroundColor(.white)
+            .background(Color.blue)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            Text("We need your permission to track you.")
+                .foregroundColor(.gray)
+                .font(.caption)
+        }
+    }
+}
+
+struct ErrorView: View {
+    var errorText: String
+    
+    var body: some View {
+        VStack {
+            Image(systemName: "xmark.octagon")
+                .resizable()
+                .frame(width: 100, height: 100, alignment: .center)
+            Text(errorText)
+        }
+        .padding()
+        .foregroundColor(.white)
+        .background(Color.red)
+    }
+}
+
+struct TrackingView: View {
+    @EnvironmentObject var locationViewModel: LocationViewModel
+    
+    
+    var body: some View {
+        VStack {
+            VStack {
+                Button("end") {
+                    locationViewModel.end()
+                }
+                HStack{
+                    Text("Latitude:")
+                    Text(String(coordinate?.latitude ?? 0))
+                    
+                }
+                HStack{
+                    
+                    Text("Longitude:")
+                    Text(String(coordinate?.longitude ?? 0))
+                }
+                HStack{
+                    
+                    Text("Altitude:")
+                    Text(String(String(locationViewModel.lastSeenLocation?.altitude ?? 0)))
+                }
+                HStack{
+                    
+                    Text("Speed:")
+                    Text(String(String(locationViewModel.lastSeenLocation?.speed ?? 0)))
+                }
+                HStack{
+                    
+                    Text("Country:")
+                    Text(String(locationViewModel.currentPlacemark?.country ?? ""))
+                }
+                HStack{
+                    
+                    Text("City:")
+                    Text(String(locationViewModel.currentPlacemark?.administrativeArea ?? ""))
+                }
+            }
+            .padding()
+        }
+    }
+    
+    var coordinate: CLLocationCoordinate2D? {
+        locationViewModel.lastSeenLocation?.coordinate
     }
 }
